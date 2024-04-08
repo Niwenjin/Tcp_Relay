@@ -7,7 +7,7 @@
 // 如果定义了EN_DEBUG，则开启日志和计时
 #ifndef NDEBUG
 #define EN_LOG
-// #define EN_TIMER
+#define EN_TIMER
 #endif
 
 // 如果定义了DEBUG_LOG，则输出DEBUG_LOG信息
@@ -24,7 +24,6 @@
     auto stop = std::chrono::high_resolution_clock::now();                   \
     auto duration =                                                          \
         std::chrono::duration_cast<std::chrono::milliseconds>(stop - start); \
-    if (duration.count() >= 15)                                              \
     std::cerr << msg << " 用时: " << duration.count() << " 毫秒\n"
 
 #else

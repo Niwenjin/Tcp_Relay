@@ -33,7 +33,7 @@ MainReactor::~MainReactor() {
 int MainReactor::epoll_init() {
     int epfd = epoll_create1(0);
     if (epfd == -1) {
-        perror("epoll_create");
+        DEBUG_LOG("epoll_create");
         exit(1);
     }
     return epfd;
@@ -75,17 +75,17 @@ int MainReactor::listensock_init() {
     int opt = 1;
     if (setsockopt(listenfd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) ==
         -1) {
-        perror("setsockopt");
+        DEBUG_LOG("setsockopt");
     }
 
     // bind
     if (bind(listenfd, (struct sockaddr *)&addr, sizeof(addr)) == -1) {
-        perror("bind");
+        DEBUG_LOG("bind");
         exit(1);
     }
     // listen
     if (listen(listenfd, 10) == -1) {
-        perror("listen");
+        DEBUG_LOG("listen");
         exit(1);
     }
 
@@ -97,7 +97,7 @@ void MainReactor::epoll_add_listen() {
     ev.events = EPOLLIN;
     ev.data.fd = listenfd;
     if (epoll_ctl(epfd, EPOLL_CTL_ADD, listenfd, &ev) == -1) {
-        perror("epoll_ctl");
+        DEBUG_LOG("epoll_ctl");
         exit(1);
     }
 }

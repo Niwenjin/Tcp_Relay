@@ -78,13 +78,22 @@ void SubReactor::relay_event(int fd) {
     sock->sock_read();
 
     // 未读完报文头部
-    if (sock->get_length() < HEAD_LEN)
+    if (sock->get_length() < HEAD_LEN) {
+        DEBUG_LOG(sock->get_length());
+        DEBUG_LOG("head not enough");
         return;
+    }
+
+    int head = sock->get_head();
+    // DEBUG_LOG("head" << head);
+    // DEBUG_LOG("buf_len" << sock->get_length());
+    // assert(head != 0);
 
     // 已经读到完整的报文
-    while (sock->get_length() > HEAD_LEN + sock->get_head()) {
+    while (sock->get_length() >= HEAD_LEN + head) {
         int tofd = relay_map[fd];
         sock->sock_send(tofd);
+        head = sock->get_head();
     }
 }
 

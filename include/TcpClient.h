@@ -20,6 +20,6 @@ class TcpClient {
     void connect_n();
 
     std::vector<char> send_msg;
-    bool send_flag;
+    int send_turn;
 };
 #endif
