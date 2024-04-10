@@ -2,6 +2,7 @@
 #define TCPCLIENT_H
 
 #include <vector>
+#include "timer.h"
 
 class TcpClient {
   public:
@@ -21,5 +22,7 @@ class TcpClient {
 
     std::vector<char> send_msg;
     int send_turn;
+    int recv_num;
+    Timer timer;
 };
 #endif

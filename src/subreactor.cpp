@@ -1,15 +1,17 @@
 #include "subreactor.h"
 #include "log.h"
 #include "sock_item.h"
+#include "timer.h"
 #include <cstdio>
 #include <cstdlib>
+#include <string>
 #include <sys/epoll.h>
 #include <unistd.h>
 
 #define MAX_EVENTS 10000
 #define HEAD_LEN 8
 
-SubReactor::SubReactor() : epfd(-1) { epfd = epoll_init(); }
+SubReactor::SubReactor() : epfd(-1), relay_num(0) { epfd = epoll_init(); }
 
 SubReactor::~SubReactor() {
     if (epfd != -1)
@@ -36,7 +38,10 @@ void SubReactor::add_relay_pair(int fd1, int fd2) {
     relay_map[fd2] = fd1;
 }
 
-void SubReactor::run() { relay_loop(); }
+void SubReactor::run() {
+    // timer.start();
+    relay_loop();
+}
 
 void SubReactor::relay_loop() {
     while (1) {
@@ -47,11 +52,17 @@ void SubReactor::relay_loop() {
             exit(1);
         }
 
+        if (relay_num == 0) {
+            timer.start();
+        }
+
         for (int i = 0; i < nfds; i++) {
             int fd = events[i].data.fd;
             // 转发
             relay_event(fd);
         }
+        
+        timer.print(std::to_string(relay_num).c_str());
     }
 }
 
@@ -79,8 +90,8 @@ void SubReactor::relay_event(int fd) {
 
     // 未读完报文头部
     if (sock->get_length() < HEAD_LEN) {
-        DEBUG_LOG(sock->get_length());
-        DEBUG_LOG("head not enough");
+        // DEBUG_LOG(sock->get_length());
+        // DEBUG_LOG("head not enough");
         return;
     }
 
@@ -93,6 +104,9 @@ void SubReactor::relay_event(int fd) {
     while (sock->get_length() >= HEAD_LEN + head) {
         int tofd = relay_map[fd];
         sock->sock_send(tofd);
+        relay_num++;
+        // if (relay_num == 50)
+        //     timer.print("");
         head = sock->get_head();
     }
 }

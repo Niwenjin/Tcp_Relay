@@ -21,12 +21,14 @@ set(SOURCE_FILES_TCPSERVER
 
 add_library(TcpServer STATIC ${SOURCE_FILES_TCPSERVER})
 
+add_library(Timer STATIC src/timer.cpp)
+
 add_executable(server server.cpp)
 
-target_link_libraries(server TcpServer)
+target_link_libraries(server TcpServer Timer)
 
 add_library(TcpClient STATIC src/TcpClient.cpp)
 
 add_executable(client client.cpp)
 
-target_link_libraries(client TcpClient)
+target_link_libraries(client TcpClient Timer)

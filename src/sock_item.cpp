@@ -23,13 +23,12 @@ void Sock_item::sock_read() {
 void Sock_item::sock_send(int tofd) {
     int len = 8 + get_head();
     int n = write(tofd, buf.data(), len);
-    DEBUG_LOG("write bytes " << n);
+    // DEBUG_LOG("write bytes " << n);
     if (n == -1) {
         DEBUG_LOG("write in fd " << fd_);
         close_flag_ = true;
         buf_clear();
         return;
-        // exit(1);
     }
     buf_end_ -= len;
     buf.erase(buf.begin(), buf.begin() + len);

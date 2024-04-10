@@ -1,6 +1,7 @@
 #ifndef SUBREACTOR_H
 #define SUBREACTOR_H
 #include "sock_item.h"
+#include "timer.h"
 #include <memory>
 #include <unordered_map>
 
@@ -13,6 +14,8 @@ class SubReactor {
 
   private:
     int epfd;
+    int relay_num;
+    Timer timer;
 
     void relay_loop();
     void relay_event(int fd);

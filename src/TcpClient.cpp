@@ -1,5 +1,6 @@
 #include "TcpClient.h"
 #include "log.h"
+// #include "time.h"
 #include <arpa/inet.h>
 #include <cstdlib>
 #include <fcntl.h>
@@ -10,7 +11,7 @@
 #define MAX_EVENTS 10000
 
 TcpClient::TcpClient(int n, int len)
-    : conn_(n), msglen_(len + 8), send_turn(0) {
+    : conn_(n), msglen_(len + 8), send_turn(0), recv_num(0) {
     send_msg.insert(send_msg.begin(), 4, '0');
     char bytes[4];
     bytes[3] = (len >> 24) & 0xFF;
@@ -43,10 +44,11 @@ void TcpClient::init() {
 void TcpClient::loop() {
     struct epoll_event events[MAX_EVENTS];
     char abort[10008];
-    START_TIMER();
+    // START_TIMER();
+    timer.start();
     while (1) {
         // 发送消息
-        if (send_turn < 1) {
+        if (send_turn < 300) {
             for (int i = 0; i < conn_; i += 2) {
                 // DEBUG_LOG(send_msg.data());
                 int n = write(fds[i], send_msg.data(), msglen_);
@@ -66,13 +68,18 @@ void TcpClient::loop() {
             exit(1);
         }
         if (nfds == 0) {
-            STOP_TIMER("");
+            // STOP_TIMER("");
             break;
         }
+        // DEBUG_LOG(nfds);
         for (int i = 0; i < nfds; ++i) {
             int fd = events[i].data.fd;
             int n = read(fd, abort, sizeof(abort));
-            DEBUG_LOG("read: " << n);
+            // recv_num++;
+            // if(recv_num==100){
+            //     timer.print("接收100条消息");
+            //     return;
+            // }
         }
     }
 }
