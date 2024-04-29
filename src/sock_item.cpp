@@ -25,7 +25,7 @@ void Sock_item::sock_send(int tofd) {
     int n = write(tofd, buf.data(), len);
     // DEBUG_LOG("write bytes " << n);
     if (n == -1) {
-        DEBUG_LOG("write in fd " << fd_);
+        // DEBUG_LOG("write in fd " << fd_);
         close_flag_ = true;
         buf_clear();
         return;
@@ -54,5 +54,7 @@ void Sock_item::pair_close() {
 
 void Sock_item::buf_clear() {
     buf.clear();
+    buf.resize(max_buf_size_);
+    buf_end_ = 0;
     // buf.insert(buf.begin(), 8, 0);
 }

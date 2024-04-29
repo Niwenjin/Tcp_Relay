@@ -1,6 +1,7 @@
 #ifndef RELAY_SERVER_H
 #define RELAY_SERVER_H
 #include "sock_item.h"
+#include "timer.h"
 #include <memory>
 #include <unordered_map>
 
@@ -35,5 +36,9 @@ class RelayServer {
     void del_pair(int fd);
     std::unordered_map<int, std::shared_ptr<Sock_item>> sock_map;
     std::unordered_map<int, int> relay_map;
+
+    // timer
+    Timer timer;
+    int relay_num = 0;
 };
 #endif

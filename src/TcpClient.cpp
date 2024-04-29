@@ -2,7 +2,7 @@
 #include "log.h"
 // #include "time.h"
 #include <arpa/inet.h>
-#include <csignal>
+// #include <csignal>
 #include <cstdlib>
 #include <fcntl.h>
 #include <sys/epoll.h>
@@ -11,12 +11,12 @@
 
 #define MAX_EVENTS 10000
 
-volatile sig_atomic_t stop = 0;
+// volatile sig_atomic_t stop = 0;
 
-void sigHandler(int sig) { stop = 1; }
+// void sigHandler(int sig) { stop = 1; }
 
 TcpClient::TcpClient(int n, int len) : conn_(n), msglen_(len + 8) {
-    signal(SIGINT, sigHandler);
+    // signal(SIGINT, sigHandler);
     send_msg.insert(send_msg.begin(), 4, '0');
     char bytes[4];
     bytes[3] = (len >> 24) & 0xFF;
@@ -42,7 +42,8 @@ TcpClient::~TcpClient() {
         close(epfd);
 }
 
-void TcpClient::conn() { for (int i = 0; i < conn_; ++i) {
+void TcpClient::conn() {
+    for (int i = 0; i < conn_; ++i) {
         int fd = socket(AF_INET, SOCK_STREAM, 0);
         if (fd == -1) {
             DEBUG_LOG("socket");
@@ -61,20 +62,21 @@ void TcpClient::conn() { for (int i = 0; i < conn_; ++i) {
             exit(1);
         }
         struct epoll_event ev;
-        ev.events = EPOLLIN || EPOLLOUT;
+        ev.events = EPOLLIN | EPOLLOUT;
         ev.data.fd = fd;
         if (epoll_ctl(epfd, EPOLL_CTL_ADD, fd, &ev) == -1) {
             DEBUG_LOG("epoll_ctl");
             exit(1);
         }
-    } }
+    }
+}
 
 void TcpClient::loop() {
     struct epoll_event events[MAX_EVENTS];
     char abort[10008];
     // START_TIMER();
-    timer.start();
-    while (!stop) {
+    // timer.start();
+    while (1) {
         // 接收消息
         int nfds = epoll_wait(epfd, events, MAX_EVENTS, -1);
         // DEBUG_LOG("nfds: " << nfds);
@@ -82,11 +84,11 @@ void TcpClient::loop() {
             DEBUG_LOG("epoll_wait");
             exit(1);
         }
+        // DEBUG_LOG("nfds" << nfds);
         if (nfds == 0) {
             // STOP_TIMER("");
             break;
         }
-        // DEBUG_LOG(nfds);
         for (int i = 0; i < nfds; ++i) {
             int fd = events[i].data.fd;
             if (events[i].events & EPOLLIN) {

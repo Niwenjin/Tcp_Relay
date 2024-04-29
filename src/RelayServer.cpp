@@ -8,6 +8,7 @@
 #include <unistd.h>
 
 #define MAX_EVENTS 30000
+#define COUNT 0
 
 volatile sig_atomic_t stop = 0;
 
@@ -49,9 +50,25 @@ void RelayServer::loop() {
             if (events[i].data.fd == listenfd) {
                 // 连接事件
                 listen_event();
+                // DEBUG_LOG("listen event");
             } else {
-                // 读取数据
+
+#if COUNT
+                if (relay_num == 0) {
+                    timer.start();
+                }
+#endif
+                // 读事件
                 read_event(events[i].data.fd);
+
+#if COUNT
+                if (relay_num > 100000) {
+                    DEBUG_LOG("relay num: " << relay_num);
+                    timer.print("timer: ");
+                    stop = 1;
+                    break;
+                }
+#endif
             }
         }
     }
@@ -136,11 +153,15 @@ void RelayServer::listen_event() {
     fdpair[fdindex++] = clientfd;
     if (fdindex == 2) {
         add_pair();
+        // DEBUG_LOG("add pair");
         fdindex = 0;
     }
 }
 
 void RelayServer::read_event(int fd) {
+    if(sock_map.find(fd) == sock_map.end()) {
+        return;
+    }
     std::shared_ptr<Sock_item> sock = sock_map[fd];
     if (sock->is_closed()) {
         // sock_map.erase(fd);
@@ -172,13 +193,11 @@ void RelayServer::read_event(int fd) {
         return;
     }
 
-    int head = sock->get_head();
-
     // 已经读到完整的报文
-    while (sock->get_length() >= HEAD_LEN + head) {
+    while (sock->get_length() >= HEAD_LEN + sock->get_head()) {
         int tofd = relay_map[fd];
         sock->sock_send(tofd);
-        head = sock->get_head();
+        relay_num++;
     }
 }
 

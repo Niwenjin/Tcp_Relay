@@ -11,6 +11,7 @@ int main(int argc, char *argv[]) {
 
     TcpClient client(connNum, msgLen);
     client.conn();
+    std::cout<<"conn done"<<std::endl;
     client.loop();
 
     return 0;
