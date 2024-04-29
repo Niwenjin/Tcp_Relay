@@ -1,7 +1,6 @@
 #include "mainreactor.h"
 #include "log.h"
 #include <arpa/inet.h>
-#include <cstdio>
 #include <cstdlib>
 #include <fcntl.h>
 #include <sys/epoll.h>
@@ -10,12 +9,18 @@
 
 #define MAX_EVENTS 10000
 
+volatile sig_atomic_t stop = 0;
+
+void MainReactor::sigHandler(int sig) { stop = 1; }
+
 MainReactor::MainReactor(int n)
     : thread_num(n), epfd(-1), listenfd(-1), fdflag(0) {
     listenfd = listensock_init();
     epfd = epoll_init();
 
     epoll_add_listen();
+
+    signal(SIGINT, sigHandler);
 
     // 创建n个子线程
     thread_init();
@@ -103,7 +108,7 @@ void MainReactor::epoll_add_listen() {
 }
 
 void MainReactor::accept_loop() {
-    while (1) {
+    while (!stop) {
         struct epoll_event events[10];
         // std::cout << "main_epfd: " << epfd << std::endl;
         int nfds = epoll_wait(epfd, events, 10, -1);
@@ -116,8 +121,9 @@ void MainReactor::accept_loop() {
             if (events[i].data.fd == listenfd) {
                 struct sockaddr_in client_addr;
                 socklen_t client_len = sizeof(client_addr);
-                int clientfd = accept4(listenfd, (struct sockaddr *)&client_addr,
-                              &client_len, SOCK_NONBLOCK);
+                int clientfd =
+                    accept4(listenfd, (struct sockaddr *)&client_addr,
+                            &client_len, SOCK_NONBLOCK);
                 if (clientfd == -1) {
                     DEBUG_LOG("accept");
                     exit(1);

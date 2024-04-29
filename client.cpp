@@ -10,7 +10,7 @@ int main(int argc, char *argv[]) {
     int msgLen = atoi(argv[2]);
 
     TcpClient client(connNum, msgLen);
-    client.init();
+    client.conn();
     client.loop();
 
     return 0;

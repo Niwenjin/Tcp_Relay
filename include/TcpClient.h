@@ -9,7 +9,7 @@ class TcpClient {
     TcpClient(int n, int len);
     ~TcpClient();
 
-    void init();
+    void conn();
     void loop();
 
   private:
@@ -18,11 +18,8 @@ class TcpClient {
 
     int epfd;
     std::vector<int> fds;
-    void connect_n();
 
     std::vector<char> send_msg;
-    int send_turn;
-    int recv_num;
     Timer timer;
 };
 #endif

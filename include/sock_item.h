@@ -4,6 +4,8 @@
 #include <signal.h>
 #include <vector>
 
+#define HEAD_LEN 8
+
 class SubReactor;
 
 class Sock_item {

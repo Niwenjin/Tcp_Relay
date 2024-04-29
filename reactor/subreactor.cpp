@@ -4,7 +4,7 @@
 #include "timer.h"
 #include <cstdio>
 #include <cstdlib>
-#include <string>
+// #include <string>
 #include <sys/epoll.h>
 #include <unistd.h>
 
@@ -62,7 +62,7 @@ void SubReactor::relay_loop() {
             relay_event(fd);
         }
         
-        timer.print(std::to_string(relay_num).c_str());
+        // timer.print(std::to_string(relay_num).c_str());
     }
 }
 

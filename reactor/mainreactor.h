@@ -1,13 +1,13 @@
 #ifndef MAINREACTOR_H
 #define MAINREACTOR_H
 #include "subreactor.h"
+#include <memory>
 #include <thread>
 #include <vector>
-#include <memory>
 
+using std::shared_ptr;
 using std::thread;
 using std::vector;
-using std::shared_ptr;
 
 class MainReactor {
   public:
@@ -37,6 +37,8 @@ class MainReactor {
 
     int add_fdpair(int fd);
     void dispatch();
+
+    static void sigHandler(int sig);
 };
 
 #endif

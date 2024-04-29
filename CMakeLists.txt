@@ -10,22 +10,25 @@ set(CMAKE_CXX_STANDARD 11)
 # 设置输出compile_commands.json
 set(CMAKE_EXPORT_COMPILE_COMMANDS on)
 
+# 设置gprof选项
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pg")
+
 include_directories(include)
 
-set(SOURCE_FILES_TCPSERVER 
-    src/mainreactor.cpp
-    src/subreactor.cpp
-    src/TcpServer.cpp
-    src/sock_item.cpp
-)
+# set(SOURCE_FILES_TCPSERVER 
+#     src/mainreactor.cpp
+#     src/subreactor.cpp
+#     src/TcpServer.cpp
+#     src/sock_item.cpp
+# )
 
-add_library(TcpServer STATIC ${SOURCE_FILES_TCPSERVER})
+# add_library(TcpServer STATIC ${SOURCE_FILES_TCPSERVER})
 
 add_library(Timer STATIC src/timer.cpp)
 
-add_executable(server server.cpp)
+add_executable(server server.cpp src/RelayServer.cpp src/sock_item.cpp)
 
-target_link_libraries(server TcpServer Timer)
+# target_link_libraries(server TcpServer Timer)
 
 add_library(TcpClient STATIC src/TcpClient.cpp)
 
