@@ -28,8 +28,7 @@ add_executable(server server.cpp src/RelayServer.cpp src/sock_item.cpp)
 target_link_libraries(server Timer)
 
 # 设置gprof选项
-# set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pg")
-set_target_properties(server PROPERTIES COMPILE_FLAGS "-pg" LINK_FLAGS "-pg")
+# set_target_properties(server PROPERTIES COMPILE_FLAGS "-pg" LINK_FLAGS "-pg")
 
 add_library(TcpClient STATIC src/TcpClient.cpp)
 

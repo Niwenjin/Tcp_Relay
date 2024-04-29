@@ -10,6 +10,7 @@
 #include <unistd.h>
 
 #define MAX_EVENTS 10000
+#define MAX_SEND_NUM 100000
 
 // volatile sig_atomic_t stop = 0;
 
@@ -76,6 +77,7 @@ void TcpClient::loop() {
     char abort[10008];
     // START_TIMER();
     // timer.start();
+    int count = 0;
     while (1) {
         // 接收消息
         int nfds = epoll_wait(epfd, events, MAX_EVENTS, -1);
@@ -95,10 +97,17 @@ void TcpClient::loop() {
                 int n = read(fd, abort, sizeof(abort));
             }
             if (events[i].events & EPOLLOUT) {
-                int n = write(fd, send_msg.data(), msglen_);
-                if (n == -1) {
-                    DEBUG_LOG("write");
+                int randNum = rand() % 100;
+                if (randNum < 1) {
+                    int n = write(fd, send_msg.data(), msglen_);
+                    count++;
+                    if (n == -1) {
+                        DEBUG_LOG("write");
+                    }
                 }
+            }
+            if (count > MAX_SEND_NUM) {
+                return;
             }
         }
     }
