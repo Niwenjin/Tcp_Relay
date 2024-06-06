@@ -11,6 +11,7 @@
 
 #define MAX_EVENTS 10000
 #define MAX_SEND_NUM 100000
+#define SERVERIPADDR "127.0.0.1"
 
 // volatile sig_atomic_t stop = 0;
 
@@ -57,7 +58,7 @@ void TcpClient::conn() {
         struct sockaddr_in addr;
         addr.sin_family = AF_INET;
         addr.sin_port = htons(6666);
-        addr.sin_addr.s_addr = inet_addr("127.0.0.1");
+        addr.sin_addr.s_addr = inet_addr(SERVERIPADDR);
         if (connect(fd, (struct sockaddr *)&addr, sizeof(addr)) == -1) {
             DEBUG_LOG("connect");
             exit(1);

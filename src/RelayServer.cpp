@@ -1,14 +1,14 @@
 #include "RelayServer.h"
 #include "log.h"
+#include "sock_item.h"
 #include <arpa/inet.h>
-#include <cstdio>
 #include <cstdlib>
 #include <fcntl.h>
+#include <signal.h>
 #include <sys/epoll.h>
 #include <unistd.h>
 
 #define MAX_EVENTS 30000
-#define COUNT 0
 
 volatile sig_atomic_t stop = 0;
 
@@ -20,6 +20,7 @@ RelayServer::RelayServer()
     epfd = epoll_init();
     epoll_add(listenfd, EPOLLIN);
     signal(SIGINT, sigHandler);
+    signal(SIGPIPE, SIG_IGN);
 }
 
 RelayServer::RelayServer(int port)
@@ -28,6 +29,7 @@ RelayServer::RelayServer(int port)
     epfd = epoll_init();
     epoll_add(listenfd, EPOLLIN);
     signal(SIGINT, sigHandler);
+    signal(SIGPIPE, SIG_IGN);
 }
 
 RelayServer::~RelayServer() {
@@ -45,30 +47,15 @@ void RelayServer::loop() {
             DEBUG_LOG("epoll_wait");
             return;
         }
-
         for (int i = 0; i < nfds; i++) {
-            if (events[i].data.fd == listenfd) {
-                // 连接事件
-                listen_event();
-                // DEBUG_LOG("listen event");
-            } else {
-
-#if COUNT
-                if (relay_num == 0) {
-                    timer.start();
+            if (events[i].events & EPOLLIN) {
+                if (events[i].data.fd == listenfd) {
+                    listen_event();
+                } else {
+                    read_event(events[i].data.fd);
                 }
-#endif
-                // 读事件
-                read_event(events[i].data.fd);
-
-#if COUNT
-                if (relay_num > 100000) {
-                    DEBUG_LOG("relay num: " << relay_num);
-                    timer.print("timer: ");
-                    stop = 1;
-                    break;
-                }
-#endif
+            } else if (events[i].events & EPOLLOUT) {
+                write_event(events[i].data.fd);
             }
         }
     }
@@ -129,14 +116,52 @@ void RelayServer::epoll_add(int fd, int events) {
     struct epoll_event ev;
     ev.events = events;
     ev.data.fd = fd;
-    if (epoll_ctl(epfd, EPOLL_CTL_ADD, fd, &ev) == -1) {
-        DEBUG_LOG("epoll_add");
+
+    // 读取当前的事件
+    struct epoll_event current_ev;
+    if (epoll_ctl(epfd, EPOLL_CTL_MOD, fd, &current_ev) == 0) {
+        ev.events |= current_ev.events;
+    } else {
+        if (errno == ENOENT) {
+            // 说明该文件描述符还没有被添加到epoll中
+            if (epoll_ctl(epfd, EPOLL_CTL_ADD, fd, &ev) == -1) {
+                DEBUG_LOG("epoll_add");
+            }
+        } else {
+            DEBUG_LOG("epoll_mod");
+        }
     }
 }
 
-void RelayServer::epoll_del(int fd) {
-    if (epoll_ctl(epfd, EPOLL_CTL_DEL, fd, NULL) == -1) {
-        DEBUG_LOG("epoll_del");
+void RelayServer::epoll_del(int fd, int events) {
+    if (events == 0) {
+        // 完全移除文件描述符
+        if (epoll_ctl(epfd, EPOLL_CTL_DEL, fd, nullptr) == -1) {
+            DEBUG_LOG("epoll_del");
+        }
+    } else {
+        // 获取当前的事件
+        struct epoll_event current_ev;
+        if (epoll_ctl(epfd, EPOLL_CTL_MOD, fd, &current_ev) == 0) {
+            // 移除指定的事件
+            current_ev.events &= ~events;
+
+            if (current_ev.events == 0) {
+                // 如果移除之后没有事件需要监听，删除文件描述符
+                if (epoll_ctl(epfd, EPOLL_CTL_DEL, fd, nullptr) == -1) {
+                    DEBUG_LOG("epoll_del");
+                }
+            } else {
+                // 否则，更新当前的事件
+                if (epoll_ctl(epfd, EPOLL_CTL_MOD, fd, &current_ev) == -1) {
+                    DEBUG_LOG("epoll_mod");
+                }
+            }
+        } else {
+            if (errno != ENOENT) {
+                DEBUG_LOG("epoll_mod");
+            }
+        }
     }
 }
 
@@ -159,13 +184,13 @@ void RelayServer::listen_event() {
 }
 
 void RelayServer::read_event(int fd) {
-    if(sock_map.find(fd) == sock_map.end()) {
+    if (sock_map.find(fd) == sock_map.end()) {
         return;
     }
-    std::shared_ptr<Sock_item> sock = sock_map[fd];
-    if (sock->is_closed()) {
+    auto recvsock = sock_map[fd];
+    if (recvsock->is_closed()) {
         // sock_map.erase(fd);
-        epoll_del(fd);
+        epoll_del(fd, 0);
         if (relay_map.find(fd) != relay_map.end()) {
             int tofd = relay_map[fd];
             // 一对连接都已关闭
@@ -182,23 +207,41 @@ void RelayServer::read_event(int fd) {
     if (relay_map.find(fd) == relay_map.end()) {
         char abort[10008];
         read(fd, &abort, sizeof(abort)); // 丢弃数据
-        sock->pair_close();
+        recvsock->pair_close();
         return;
     }
     // 将socket中的数据读取到buf中
-    sock->sock_read();
+    recvsock->sock_read();
 
     // 未读完报文头部
-    if (sock->get_length() < HEAD_LEN) {
+    if (recvsock->recv_len() < HEAD_LEN) {
         return;
     }
 
     // 已经读到完整的报文
-    while (sock->get_length() >= HEAD_LEN + sock->get_head()) {
+    // while (sock->get_length() >= HEAD_LEN + sock->get_head()) {
+    //     int tofd = relay_map[fd];
+    //     sock->sock_send(tofd);
+    //     // relay_num++;
+    // }
+    while (recvsock->recv_len() >= HEAD_LEN + recvsock->recv_head()) {
         int tofd = relay_map[fd];
-        sock->sock_send(tofd);
-        relay_num++;
+        auto sendsock = sock_map[tofd];
+        // 将一个完整的包转移到发送缓冲区
+        Sock_item::bufcopy(recvsock.get(), sendsock.get());
+        // 关注发送fd的写事件
+        epoll_add(tofd, EPOLLOUT);
     }
+}
+
+void RelayServer::write_event(int fd) {
+    auto sendsock = sock_map[fd];
+    while (sendsock->send_len() >= HEAD_LEN + sendsock->send_head()) {
+        // 每次转发一条完整的报文
+        sendsock->sock_send();
+    }
+    // 关闭可写事件
+    epoll_del(fd, EPOLLOUT);
 }
 
 void RelayServer::add_pair() {
